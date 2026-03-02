@@ -15,8 +15,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install -r requirements.txt
+      - name: Install project
+        run: |
+          pip install -e .
+          pip install pytest
 
-      - run: pip install pytest
-
-      - run: pytest
+      - name: Run tests
+        run: pytest
