@@ -5,9 +5,42 @@ on:
   pull_request:
 
 jobs:
-  test:
+  test-deterministic:
     runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install project
+        run: |
+          pip install -e .
+          pip install pytest pytest-cov
+
+      - name: Run deterministic tests
+        run: pytest -m "not live" --cov=. --cov-report=term-missing
+      
+      - name: Check code quality (basic)
+        run: |
+          pip install flake8
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+  
+  test-live:
+    runs-on: ubuntu-latest
+    # Optional - only run on schedule or manual trigger
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -20,5 +53,6 @@ jobs:
           pip install -e .
           pip install pytest
 
-      - name: Run tests
-        run: pytest
+      - name: Run live API tests
+        run: pytest -m "live"
+        continue-on-error: true  # Don't fail CI on live API issues

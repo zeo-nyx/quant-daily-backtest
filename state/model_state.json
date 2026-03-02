@@ -1,4 +1,7 @@
 {
+    "schema_version": 2,
     "short_window": 20,
-    "long_window": 50
+    "long_window": 50,
+    "last_retune_date": "2026-03-02T21:21:53.699631",
+    "last_objective": 0.0
 }

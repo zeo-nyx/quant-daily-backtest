@@ -32,9 +32,45 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run research pipeline
-        run: python run_pipeline.py
+        id: pipeline
+        run: |
+          python run_pipeline.py
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Validate output artifacts
+        id: validate
+        if: steps.pipeline.outputs.exit_code == '0'
+        run: |
+          # Check that required output files exist and are valid JSON
+          if [ ! -f "results/latest_metrics.json" ]; then
+            echo "Missing results/latest_metrics.json"
+            exit 1
+          fi
+          
+          if [ ! -f "state/model_state.json" ]; then
+            echo "Missing state/model_state.json"
+            exit 1
+          fi
+          
+          # Validate JSON syntax
+          python -c "import json; json.load(open('results/latest_metrics.json'))"
+          python -c "import json; json.load(open('state/model_state.json'))"
+          
+          echo "Validation passed"
+
+      - name: Upload run artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: research-outputs
+          path: |
+            results/
+            state/
+          retention-days: 30
 
       - name: Commit and push changes
+        if: steps.validate.outcome == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -42,7 +78,16 @@ jobs:
           git add state results
 
           # Only commit if there are changes
-          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
 
-          git commit -m "Automated daily research update"
+          git commit -m "Automated daily research update [$(date -u +%Y-%m-%d)]"
           git push
+      
+      - name: Report failure
+        if: steps.pipeline.outputs.exit_code != '0' || steps.validate.outcome == 'failure'
+        run: |
+          echo "::error::Pipeline failed or validation failed. No changes committed."
+          exit 1
