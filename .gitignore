@@ -88,3 +88,6 @@ Thumbs.db
 .env
 .envrc
 local_config.py
+
+QUICKSTART.md
+IMPLEMENTATION_SUMMARY.md
