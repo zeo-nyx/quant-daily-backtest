@@ -1,5 +1,8 @@
 name: Quant Daily Research
 
+permissions:
+  contents: write
+  
 on:
   schedule:
     - cron: "0 22 * * 1-5"   # Weekdays 22:00 UTC
